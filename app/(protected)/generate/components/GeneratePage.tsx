@@ -124,7 +124,7 @@ export default function GeneratePage() {
   
   {/* Defined constants */}
   const MAX_INPUT_LENGTH = 2000;
-  const counterColor = `${userInput.length >= 1999
+  const counterColor = `${userInput.length >= MAX_INPUT_LENGTH
                     ? "text-red-500 font-bold"
                     : userInput.length >= 1800
                     ? "text-orange-500 font-medium"
@@ -146,18 +146,19 @@ export default function GeneratePage() {
 
           {/* Counter color darkens after 1500 characters */}
           <div className="flex justify-end mt-1 mr-3">
-            {userInput.length > 0 && (
-              <p className={`
-                text-sm transition-colors duration-700
+            <p
+              className={`text-sm transition-colors duration-700
                 ${counterColor}
-                `}
-              >
-                  {userInput.length}/{MAX_INPUT_LENGTH}
-
-                  {/* " ! " mark appears as character count goes over 2000 */}
-                  {userInput.length > MAX_INPUT_LENGTH && " !"}
-                </p>
-            )}
+                ${userInput.length > 0 ? "opacity-100" : "opacity-0"}
+              `}
+            >
+              {/* " ! " mark appears as character count goes over 2000 */}
+              {
+                `${userInput.length}/${MAX_INPUT_LENGTH}${
+                  userInput.length > MAX_INPUT_LENGTH ? " !" : ""
+                }`
+              }
+            </p>
           </div>
         </div>
 
