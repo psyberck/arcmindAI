@@ -74,6 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
 
       if (dateFilter === "30days") {
+      
         return matchesSearch && diffDays <= 30;
       }
 
@@ -144,10 +145,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         {/* @ts-expect-error: setSearchQuery (from useState) signature does not exactly match SearchForm's onChange prop, but is safe here */}
         <SearchForm value={searchQuery} onChange={setSearchQuery} />
-        <div className="flex gap-2 px-2 pb-2">
+        <div className="flex flex-wrap gap-2 px-2 pb-2">
           <Button
             variant={dateFilter === "all" ? "default" : "outline"}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setDateFilter("all")}
           >
             All
@@ -156,6 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Button
             variant={dateFilter === "today" ? "default" : "outline"}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setDateFilter("today")}
           >
             Today
@@ -164,6 +167,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Button
             variant={dateFilter === "7days" ? "default" : "outline"}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setDateFilter("7days")}
           >
             7 Days
@@ -172,6 +176,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Button
             variant={dateFilter === "30days" ? "default" : "outline"}
             size="sm"
+            className="text-xs sm:text-sm"
             onClick={() => setDateFilter("30days")}
           >
             30 Days
