@@ -26,6 +26,8 @@ interface GenerateGithubDesignRequest {
 export async function POST(request: NextRequest) {
   const route = "/api/generate-github-design";
   const method = "POST";
+  let aiRequested = false;
+  let aiFailureRecorded = false;
 
   try {
     // Check authentication
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
     const userApiKeys = await getUserApiKeys(userId);
 
     aiGenerationRequestsTotal.inc();
+    aiRequested = true;
     const aiStart = Date.now();
     const { response } = await invokeGeminiWithFallback(
       messages,
@@ -113,6 +116,7 @@ export async function POST(request: NextRequest) {
 
     if (!response || !response.content) {
       aiGenerationFailureTotal.inc();
+      aiFailureRecorded = true;
       throw new Error("Empty AI response received.");
     }
     let mermaidDiagram = response.content as string;
@@ -147,7 +151,9 @@ export async function POST(request: NextRequest) {
       cached: false, // Indicate this is newly generated
     });
   } catch (error) {
-    aiGenerationFailureTotal.inc();
+    if (aiRequested && !aiFailureRecorded) {
+      aiGenerationFailureTotal.inc();
+    }
     console.error("GitHub design generation error:", error);
     httpRequestsTotal.inc({ route, method, status_code: "500" });
     return NextResponse.json(
