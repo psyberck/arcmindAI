@@ -9,9 +9,12 @@ import {
   aiGenerationSuccessTotal,
   aiGenerationFailureTotal,
   aiGenerationDurationSeconds,
+  httpRequestsTotal,
 } from "@/lib/metrics";
 
 export async function POST(req: NextRequest) {
+  const route = "/api/github-generation/[id]/improve-diagram";
+  const method = "POST";
   let aiRequested = false;
   let aiFailureRecorded = false;
 
@@ -19,6 +22,7 @@ export async function POST(req: NextRequest) {
     const { currentDiagram, userPrompt, useAISuggestion } = await req.json();
 
     if (!currentDiagram) {
+      httpRequestsTotal.inc({ route, method, status_code: "400" });
       return NextResponse.json(
         { success: false, error: "Current diagram is required" },
         { status: 400 },
@@ -36,6 +40,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Use custom user prompt
       if (!userPrompt || userPrompt.trim() === "") {
+        httpRequestsTotal.inc({ route, method, status_code: "400" });
         return NextResponse.json(
           { success: false, error: "User prompt is required" },
           { status: 400 },
@@ -70,6 +75,7 @@ export async function POST(req: NextRequest) {
       .trim();
 
     aiGenerationSuccessTotal.inc();
+    httpRequestsTotal.inc({ route, method, status_code: "200" });
     return NextResponse.json({
       success: true,
       improvedDiagram: cleanedDiagram,
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
       aiGenerationFailureTotal.inc();
     }
     console.error("Error improving diagram:", error);
+    httpRequestsTotal.inc({ route, method, status_code: "500" });
     return NextResponse.json(
       {
         success: false,
