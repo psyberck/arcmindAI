@@ -2,6 +2,19 @@
 
 Generate structured system designs using AI. Describe your requirements and get detailed architecture diagrams, components, and tech stacks powered by Gemini and LangChain. Import GitHub repositories for automated system design generation.
 
+> [!IMPORTANT]
+>
+> ## GSSoC 2026 Contributors
+>
+> This project is participating in **GirlScript Summer of Code 2026**.
+>
+> - Please **comment on an issue first** to request assignment before starting work.
+> - Wait for confirmation before opening a PR to avoid duplicate contributions.
+> - For contribution rules, announcements, and questions, please use the pinned discussion:
+>   [GSSoC 2026 Discussion](https://github.com/SATYAM-PRATIBHAN/arcmindAI/discussions/120)
+>
+> Please also read the contribution guidelines before submitting changes.
+
 ## Features
 
 - **AI-Powered Generation**: Leverage Google Gemini and LangChain to create comprehensive system designs from natural language descriptions

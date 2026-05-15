@@ -19,6 +19,7 @@ import { DOC_ROUTES } from "@/lib/routes";
 import { useGetUser, User as FullUser } from "@/hooks/useGetUser";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
 import {
   Tooltip,
@@ -68,18 +69,25 @@ export function UserDetailsCard({
   const { data: session } = useSession();
   const router = useRouter();
   const [fullUser, setFullUser] = useState<FullUser | null>(null);
+  const [isLoadingFullUser, setIsLoadingFullUser] = useState(true);
   const { getUser } = useGetUser();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
+      setIsLoadingFullUser(true);
       const userData = await getUser();
       if (userData?.success) {
         setFullUser(userData?.output);
       }
+      setIsLoadingFullUser(false);
     };
     fetchUser();
   }, [session]);
+
+  if (!user) {
+    return <UserDetailsCardSkeleton />;
+  }
 
   return (
     <Card>
@@ -182,7 +190,9 @@ export function UserDetailsCard({
           </div>
         </div>
 
-        {fullUser && (
+        {isLoadingFullUser ? (
+          <SubscriptionDetailsSkeleton />
+        ) : fullUser ? (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <ShieldCheck className="w-4 h-4" />
@@ -261,8 +271,58 @@ export function UserDetailsCard({
               )}
             </div>
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function UserDetailsCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2">
+          <User className="w-5 h-5" />
+          User Details
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+          <div className="flex-1 space-y-3 w-full">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="h-7 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-5 w-64 max-w-full" />
+            <Skeleton className="h-5 w-48 max-w-full" />
+          </div>
+          <div className="space-y-3 w-full md:w-48">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <SubscriptionDetailsSkeleton />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SubscriptionDetailsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-5 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
   );
 }

@@ -75,9 +75,23 @@ export function GenerationHistoryCard({
 
       <CardContent>
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="rounded-md border">
+            <div className="grid grid-cols-4 gap-4 border-b p-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+            </div>
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <div
+                key={i}
+                className="grid grid-cols-4 gap-4 border-b p-4 last:border-b-0"
+              >
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-16" />
+              </div>
             ))}
           </div>
         ) : filteredHistory.length > 0 ? (
