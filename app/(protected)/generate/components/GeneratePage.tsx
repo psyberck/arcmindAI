@@ -119,32 +119,30 @@ export default function GeneratePage() {
   };
 
   
-  {/*prompt is saved inside "userInput" variable, as watch() monitors over the changes in input element*/ }
   const userInput = watch("userInput", "");
   
-  {/* Defined constants */}
   const MAX_INPUT_LENGTH = 2000;
-  const counterColor = `${userInput.length >= MAX_INPUT_LENGTH
+  const counterColor = userInput.length === MAX_INPUT_LENGTH
                     ? "text-red-500 font-bold"
                     : userInput.length >= 1800
                     ? "text-orange-500 font-medium"
                     : userInput.length >= 1500
                     ? "text-amber-400"
-                    : "text-muted-foreground"}`;
+                    : "text-muted-foreground";
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex gap-4 items-start">
 
-        {/*Wrapped input element and counter together inside one div element for proper alignment*/}
+        {/* Input + counter wrapper */}
         <div className="flex-1">
           <Input
             placeholder="Enter your system architecture prompt..."
             {...register("userInput")}
+            maxLength={MAX_INPUT_LENGTH}
             className="flex-1"
           />
 
-          {/* Counter color darkens after 1500 characters */}
           <div className="flex justify-end mt-1 mr-3">
             <p
               className={`text-sm transition-colors duration-700
@@ -152,12 +150,7 @@ export default function GeneratePage() {
                 ${userInput.length > 0 ? "opacity-100" : "opacity-0"}
               `}
             >
-              {/* " ! " mark appears as character count goes over 2000 */}
-              {
-                `${userInput.length}/${MAX_INPUT_LENGTH}${
-                  userInput.length > MAX_INPUT_LENGTH ? " !" : ""
-                }`
-              }
+                {userInput.length}/{MAX_INPUT_LENGTH}
             </p>
           </div>
         </div>
