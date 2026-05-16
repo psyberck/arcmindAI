@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // @ts-expect-error id is added in jwt callback
+    const userId = session.user.id;
+
     // Get user's encrypted GitHub token from database
     const user = await db.user.findUnique({
       where: {
-        // @ts-expect-error id is added in jwt callback
-        id: session.user.id,
+        id: userId,
       },
       select: {
         githubAccessToken: true,
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     const githubToken = decryptToken(user.githubAccessToken);
 
     // Create analyzer and run analysis
-    const analyzer = new RepositoryAnalyzer(owner, repo, githubToken);
+    const analyzer = new RepositoryAnalyzer(userId, owner, repo, githubToken);
     const analysis = await analyzer.analyze();
 
     return NextResponse.json({
