@@ -3,9 +3,9 @@
 import { useGenerateSystem } from "../hooks/useGenerateSystem";
 import { useHistory } from "@/lib/contexts/HistoryContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import MermaidDiagram from "./mermaidDiagram";
 import CopyDiagramButton from "./CopyDiagramButton";
 import { ArchitectureData } from "../utils/types";
@@ -26,22 +26,50 @@ export default function GeneratePage() {
     isLoading,
     error: generateError,
   } = useGenerateSystem(refetch);
-  const [userInput, setUserInput] = useState("");
+  const { register, watch, setValue } = useForm();
   const [error, setError] = useState<string | null>(null);
   const [generatedData, setGeneratedData] = useState<ArchitectureData | null>(
     null,
   );
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const userInput = watch("userInput", "");
+
+  // Auto-expand textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto to get correct scrollHeight
+      textareaRef.current.style.height = "auto";
+      // Set height based on scrollHeight but respect max-height
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 300);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [userInput]);
+
+  const registerField = register("userInput");
+
+  // Combine refs - forward react-hook-form ref to our custom ref
+  const handleRef = (el: HTMLTextAreaElement | null) => {
+    textareaRef.current = el;
+    if (registerField.ref) {
+      if (typeof registerField.ref === "function") {
+        registerField.ref(el);
+      } else if ("current" in registerField.ref) {
+        (
+          registerField.ref as React.MutableRefObject<HTMLTextAreaElement | null>
+        ).current = el;
+      }
+    }
+  };
+
+  const { ref, ...restRegisterField } = registerField;
+
+  const MAX_INPUT_LENGTH = 2000;
 
   const handleSelectTemplate = (templateBody: string) => {
-    if (userInput.trim()) {
-      // If there's existing content, append with separator
-      setUserInput(
-        userInput.trim() + "\n\n" + "-".repeat(16) + "\n\n" + templateBody,
-      );
-    } else {
-      // If empty, just insert directly
-      setUserInput(templateBody);
-    }
+    // Always replace with the new template, respecting MAX_INPUT_LENGTH
+    const truncatedTemplate = templateBody.substring(0, MAX_INPUT_LENGTH);
+    setValue("userInput", truncatedTemplate);
   };
 
   const handleGenerate = async () => {
@@ -143,15 +171,46 @@ export default function GeneratePage() {
     }
   };
 
+  const counterColor =
+    userInput.length === MAX_INPUT_LENGTH
+      ? "text-red-500 font-bold"
+      : userInput.length >= 1800
+        ? "text-orange-500 font-medium"
+        : userInput.length >= 1500
+          ? "text-amber-400"
+          : "text-muted-foreground";
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex gap-4 items-center flex-wrap">
-        <Input
-          placeholder="Enter your system architecture prompt..."
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          className="flex-1 min-w-[200px]"
-        />
+      <div className="flex gap-4 items-start">
+        {/* Input + counter wrapper */}
+        <div className="flex-1">
+          <textarea
+            ref={handleRef}
+            placeholder="Enter your system architecture prompt..."
+            {...restRegisterField}
+            maxLength={MAX_INPUT_LENGTH}
+            className="w-full px-3 py-2 border border-input bg-background text-base rounded-md resize-none"
+            style={{
+              minHeight: "40px",
+              maxHeight: "300px",
+              overflow: "auto",
+              height: "auto",
+            }}
+          />
+
+          <div className="flex justify-end mt-1 mr-3">
+            <p
+              className={`text-sm transition-colors duration-700
+                ${counterColor}
+                ${userInput.length > 0 ? "opacity-100" : "opacity-0"}
+              `}
+            >
+              {userInput.length}/{MAX_INPUT_LENGTH}
+            </p>
+          </div>
+        </div>
+
         <Button
           onClick={handleGenerate}
           disabled={isLoading || !userInput.trim()}
