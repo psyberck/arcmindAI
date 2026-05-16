@@ -6,7 +6,7 @@ const redis = new Redis({
 });
 
 export function getCacheKey(keyword: string, userId: string, ...args: string[]): string {
-  return `${keyword}:${userId}:${args.join('/')}`
+  return `${keyword}:${userId}:${args.join("/")}`
 }
 
 export async function withCache<T>(

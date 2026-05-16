@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { db } from "@/lib/prisma";
+import { getCacheKey, withCache } from "@/lib/cache";
 import { decryptToken } from "@/lib/encryption";
-import { withCache } from "@/lib/cache";
+import { db } from "@/lib/prisma";
 import axios from "axios";
+import { getServerSession } from "next-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 const CACHE_TTL_SECONDS = 60 * 60;
 
@@ -54,18 +54,20 @@ export async function GET(request: NextRequest) {
     // Decrypt the token
     const githubToken = decryptToken(user.githubAccessToken);
 
-    const cacheKey = `github:repo-info:${userId}:${owner}/${repo}`;
-    const data = await withCache(cacheKey, CACHE_TTL_SECONDS, async () => {
-      const response = await axios.get(
-        `https://api.github.com/repos/${owner}/${repo}`,
-        {
-          headers: {
-            Authorization: `Bearer ${githubToken}`,
-            Accept: "application/vnd.github.v3+json",
+    const data = await withCache(
+      getCacheKey("github:repo-info", userId, owner, repo),
+      CACHE_TTL_SECONDS,
+      async () => {
+        const response = await axios.get(
+          `https://api.github.com/repos/${owner}/${repo}`,
+          {
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: "application/vnd.github.v3+json",
+            },
           },
-        },
-      );
-      return response.data;
+        );
+        return response.data;
     });
 
     return NextResponse.json({ success: true, data });
