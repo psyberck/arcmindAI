@@ -6,14 +6,14 @@ import { formatRepositoryAnalysisForAI } from "@/app/(protected)/generate/utils/
 import { RepositoryAnalysis } from "@/types/repository-analysis";
 import { db } from "@/lib/prisma";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { invokeGeminiWithFallback } from "@/app/(protected)/generate/utils/aiClient";
+import { streamGeminiWithFallback } from "@/app/(protected)/generate/utils/aiClient";
 import { getUserApiKeys } from "@/lib/api-keys/getUserApiKeys";
 
-interface GenerateGithubDesignRequest {
+interface GenerateGithubDesignRequest { 
   owner: string;
   repo: string;
   analysisData: RepositoryAnalysis;
-}
+} 
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if a design already exists for this repository
-    const repoIdentifier = `${repo}`;
+    const repoIdentifier = `${owner}/${repo}`;
     const existingGeneration = await db.generation.findFirst({
       where: {
         userId: userId,
@@ -57,15 +57,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // If design already exists, return it from cache
-    if (existingGeneration?.githubGeneration) {
-      return NextResponse.json({
-        success: true,
-        generationId: existingGeneration.id,
-        mermaidDiagram: existingGeneration.githubGeneration,
-        cached: true, // Indicate this is from cache
-      });
-    }
+    // // If design already exists, return it from cache
+    // if (existingGeneration?.githubGeneration) {
+    //   return NextResponse.json({
+    //     success: true,
+    //     generationId: existingGeneration.id,
+    //     mermaidDiagram: existingGeneration.githubGeneration,
+    //     cached: true, // Indicate this is from cache
+    //   });
+    // }
+
+   if (existingGeneration?.githubGeneration) {
+  const encoder = new TextEncoder();
+  const cachedDiagram = existingGeneration.githubGeneration;
+
+  const cachedStream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(cachedDiagram)
+      );
+
+      controller.close();
+    },
+  }); 
+
+ return new Response(cachedStream, {
+  headers: {
+    "Content-Type":
+    "text/plain; charset=utf-8",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  },
+});
+
+}  
 
     // Format analysis data for AI
     const userMessage = formatRepositoryAnalysisForAI(
@@ -83,33 +108,94 @@ export async function POST(request: NextRequest) {
     // 🔑 Fetch user's API keys
     const userApiKeys = await getUserApiKeys(userId);
 
-    const { response } = await invokeGeminiWithFallback(
+    // const { response } = await invokeGeminiWithFallback(
+    //   messages,
+    //   userApiKeys.geminiApiKey,
+    // );
+
+    // streaming version
+     const responseStream = await streamGeminiWithFallback(
       messages,
-      userApiKeys.geminiApiKey,
-    );
-    let mermaidDiagram = response.content as string;
+       userApiKeys.geminiApiKey 
+      );
+         let mermaidDiagram = "";
+         const encoder = new TextEncoder();
+     const readable = new ReadableStream({
+         async start(controller) {
+    try {
+      for await (const chunk of responseStream) {
+        const text =
+          chunk.content?.toString() || "";
 
-    // Clean up the response - remove markdown code blocks if present
-    mermaidDiagram = mermaidDiagram
-      .replace(/```mermaid\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
+        // Store full response
+        mermaidDiagram += text;
 
-    // Save to database
-    const generation = await db.generation.create({
-      data: {
-        userInput: repoIdentifier,
-        githubGeneration: mermaidDiagram,
-        userId: userId,
-      },
-    });
+        // Stream chunk immediately
+        controller.enqueue(
+          encoder.encode(text)
+        );
+      }
+      // Cleanup markdown formatting
+      mermaidDiagram = mermaidDiagram
+        .replace(/```mermaid\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
 
-    return NextResponse.json({
-      success: true,
-      generationId: generation.id,
-      mermaidDiagram,
-      cached: false, // Indicate this is newly generated
-    });
+      // Save completed response
+      await db.generation.create({
+        data: {
+          userInput: repoIdentifier,
+          githubGeneration: mermaidDiagram,
+          userId,
+        },
+      });
+
+        controller.close();
+     } catch (error) {
+      console.error(
+        "Streaming error:",
+        error
+      );
+
+      controller.error(error);
+    }
+  },
+});
+  
+return new Response(readable, {
+  headers: {
+    "Content-Type":
+    "text/plain; charset=utf-8",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  },
+});
+
+    
+    // let mermaidDiagram = response.content as string;
+
+    // // Clean up the response - remove markdown code blocks if present
+    // mermaidDiagram = mermaidDiagram
+    //   .replace(/```mermaid\n?/g, "")
+    //   .replace(/```\n?/g, "")
+    //   .trim();
+
+    // // Save to database
+    // const generation = await db.generation.create({
+    //   data: {
+    //     userInput: repoIdentifier,
+    //     githubGeneration: mermaidDiagram,
+    //     userId: userId,
+    //   },
+    // });
+
+    // return NextResponse.json({
+    //   success: true,
+    //   generationId: generation.id,
+    //   mermaidDiagram,
+    //   cached: false, // Indicate this is newly generated
+    // });
+
   } catch (error) {
     console.error("GitHub design generation error:", error);
     return NextResponse.json(
@@ -120,7 +206,7 @@ export async function POST(request: NextRequest) {
             ? error.message
             : "Failed to generate system design",
       },
-      { status: 500 },
+      { status: 500 }
     );
-  }
-}
+  }  
+} 

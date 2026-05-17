@@ -28,11 +28,13 @@ export default function GeneratePage() {
   const [generatedData, setGeneratedData] = useState<ArchitectureData | null>(
     null,
   );
+  const [streamingProgress, setStreamingProgress] = useState<string>("");
+  const [isStreaming, setIsStreaming] = useState(false);
 
   function cleanMermaidString(input: string | undefined | null): string {
     if (!input || typeof input !== "string") return "";
 
-    return (
+    return ( 
       input
         // Remove code block markers if present (for backward compatibility)
         .replace(/^```mermaid\n?/g, "")
@@ -48,8 +50,23 @@ export default function GeneratePage() {
   }
 
   const handleGenerate = async () => {
-    const result = await generate(userInput);
+    setError(null);
+    setGeneratedData(null);
+    setStreamingProgress("");
+    setIsStreaming(true);
+
+    const result = await generate(userInput, (chunk: string) => {
+      // Update streaming progress in real-time
+      // setStreamingProgress(chunk);
+      setStreamingProgress((prev) => prev + chunk);
+    });  
+
+    // 👇 ADD THESE DEBUG LOGS RIGHT HERE 
+          console.log("FULL RESULT:", result);
+          console.log("output:", result?.output);
+          console.log("length:", result?.output?.length ?? 0);
     if (result && result.success) {
+      setIsStreaming(false); 
       try {
         // More robust parsing: find JSON content between ```json and ```
         let cleanedOutput = result.output;
@@ -100,8 +117,15 @@ export default function GeneratePage() {
           throw new Error("No JSON content found in AI response.");
         }
 
+        // const parsedData: ArchitectureData = JSON.parse(cleanedOutput);
+        // setGeneratedData(parsedData);
+        console.log("FINAL OUTPUT:", cleanedOutput);
+
         const parsedData: ArchitectureData = JSON.parse(cleanedOutput);
-        setGeneratedData(parsedData);
+
+        console.log("PARSED DATA:", parsedData);
+
+        setGeneratedData(parsedData); 
       } catch (parseError) {
         console.error("Failed to parse generated data:", parseError);
         console.error("Raw output length:", result.output.length);
@@ -112,7 +136,7 @@ export default function GeneratePage() {
         setGeneratedData(null);
       }
     } else {
-      setError(generateError);
+      setError(generateError); 
       setGeneratedData(null);
     }
   };
@@ -138,6 +162,25 @@ export default function GeneratePage() {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-4">
             <p className="text-red-800">Error: {error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {isStreaming && streamingProgress && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-900">
+              🔄 Generating in Real-Time
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="max-h-48 overflow-auto rounded bg-white p-3 text-xs font-mono text-gray-700 whitespace-pre-wrap break-words">
+              {streamingProgress}
+              <span className="animate-pulse">▌</span>
+            </div>
+            <p className="mt-2 text-xs text-blue-700">
+              Streaming response in real-time... {streamingProgress.length} characters received
+            </p>
           </CardContent>
         </Card>
       )}
@@ -168,27 +211,36 @@ export default function GeneratePage() {
           {/* Sections */}
           <section>
             <h2 className="text-2xl font-bold mb-4">Microservices</h2>
-            <MicroservicesSection microservices={generatedData.microservices} />
+            <MicroservicesSection microservices={generatedData.microservices || []} />
           </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4">Entities</h2>
-            <EntitiesSection entities={generatedData.entities} />
+            <EntitiesSection entities={generatedData.entities || []} />
           </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4">API Routes</h2>
-            <ApiRoutesSection apiRoutes={generatedData.apiRoutes} />
+            <ApiRoutesSection apiRoutes={generatedData.apiRoutes || []} />
           </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4">Database Schema</h2>
-            <DatabaseSchemaSection schema={generatedData.databaseSchema} />
+            <DatabaseSchemaSection schema={generatedData.databaseSchema || {
+              type: "",
+      collections: [], 
+            }} />
           </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4">Infrastructure</h2>
-            <InfrastructureSection infra={generatedData.infrastructure} />
+            <InfrastructureSection infra={generatedData.infrastructure || {
+               hosting: "",
+      database: "",
+      auth: "",
+      cdn: "",
+      scaling: "", 
+            }} />
           </section>
 
           {generatedData["Architecture Diagram"] && (

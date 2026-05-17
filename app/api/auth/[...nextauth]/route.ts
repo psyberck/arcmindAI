@@ -29,7 +29,7 @@ export const authOptions: AuthOptions = {
 
       async authorize(credentials, req) {
         const startTime = Date.now();
-        const route = "/api/auth/[...nextauth]";
+        const route = "/api/auth/[...nextauth]"; 
         const method = "POST"; // Assuming login is POST
         httpRequestsTotal.inc({ route, method });
 
@@ -43,11 +43,21 @@ export const authOptions: AuthOptions = {
             throw new Error("Missing email or password");
           }
 
-          // Get client IP
-          const ip =
-            req?.headers?.["x-forwarded-for"] ||
-            req?.headers?.["x-real-ip"] ||
+          // Get client IP - ensure it's a valid string
+          let ip: string = 
+            (req?.headers?.["x-forwarded-for"] as string) ||
+            (req?.headers?.["x-real-ip"] as string) ||
             "unknown";
+          
+          // Validate IP - should not be a path or unusual characters
+          if (ip && (ip.startsWith("/") || ip.includes("/"))) {
+            ip = "unknown";
+          }
+          
+          // Handle comma-separated IPs (take first one from x-forwarded-for)
+          if (ip && ip.includes(",")) {
+            ip = ip.split(",")[0].trim();
+          }
 
           // Rate limit by IP
           const ipLimitResult = await loginRateLimitIP.limit(ip);

@@ -11,7 +11,7 @@ interface UpdateResponseCardProps {
   error?: string | null;
 }
 
-export default function UpdateResponseCard({
+export default function UpdateResponseCard({ 
   responseText,
   onResponseTextChange,
   onUpdate,

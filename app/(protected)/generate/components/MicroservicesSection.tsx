@@ -2,13 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArchitectureData } from "../utils/types";
 
 interface MicroservicesSectionProps {
-  microservices: ArchitectureData["microservices"];
+  microservices?: ArchitectureData["microservices"];
 }
 
 export default function MicroservicesSection({
-  microservices,
+  microservices = [],
 }: MicroservicesSectionProps) {
-  const renderList = (title: string, items: string[]) => {
+  const renderList = (title: string, items: string[]) => { 
     if (!items.length) return null;
     return (
       <div className="mt-3">
@@ -34,8 +34,8 @@ export default function MicroservicesSection({
               {service.responsibility}
             </p>
             <div className="flex flex-wrap gap-2">
-              {service.techStack.map((tech, idx) => (
-                <span
+              {service.techStack?.map((tech, idx) => (
+                <span 
                   key={idx}
                   className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                 >

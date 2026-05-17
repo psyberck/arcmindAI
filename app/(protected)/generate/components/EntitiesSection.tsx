@@ -2,15 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArchitectureData } from "../utils/types";
 
 interface EntitiesSectionProps {
-  entities: ArchitectureData["entities"];
+  entities?: ArchitectureData["entities"];
 }
 
-export default function EntitiesSection({ entities }: EntitiesSectionProps) {
+export default function EntitiesSection({ entities = [], }: EntitiesSectionProps) {
   return (
     <div className="space-y-4">
-      {entities.map((entity, index) => (
+      {entities?.map((entity, index) => (
         <Card key={index}>
-          <CardHeader>
+          <CardHeader> 
             <CardTitle className="text-lg">{entity.name}</CardTitle>
           </CardHeader>
           <CardContent>
