@@ -20,7 +20,6 @@ import { StarterTemplates } from "@/components/prompt";
 import Lottie from "lottie-react";
 import animationData from "@/components/loaderLottie.json";
 import { Sparkles, Send, AlertCircle } from "lucide-react";
-import { downloadMarkdownFile } from "../utils/generate-markdown";
 
 export default function GeneratePage() {
   const { refetch } = useHistory();
@@ -154,54 +153,7 @@ export default function GeneratePage() {
         : "text-muted-foreground/60";
 
   return (
-
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex gap-4 items-start">
-        {/* Input + counter wrapper */}
-        <div className="flex-1">
-          <textarea
-            ref={handleRef}
-            placeholder="Enter your system architecture prompt..."
-            {...restRegisterField}
-            maxLength={MAX_INPUT_LENGTH}
-            className="w-full px-3 py-2 border border-input bg-background text-base rounded-md resize-none"
-            style={{
-              minHeight: "40px",
-              maxHeight: "300px",
-              overflow: "auto",
-              height: "auto",
-            }}
-          />
-
-          <div className="flex justify-end mt-1 mr-3">
-            <p
-              className={`text-sm transition-colors duration-700
-                ${counterColor}
-                ${userInput.length > 0 ? "opacity-100" : "opacity-0"}
-              `}
-            >
-              {userInput.length}/{MAX_INPUT_LENGTH}
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={handleGenerate}
-          disabled={isLoading || !userInput.trim()}
-        >
-          {isLoading ? "Generating..." : "Generate System"}
-        </Button>
-        <Button
-          onClick={() => {
-            if (!generatedData) return;
-            downloadMarkdownFile(generatedData);
-          }}
-          disabled={!generatedData}
-        >
-          Export Markdown
-        </Button>
-      </div>
-
       {/* Show starter templates only before generation */}
 
       {!generatedData && (

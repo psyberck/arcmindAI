@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Code2, Sparkles } from "lucide-react";
+import { Code2, Download, Sparkles } from "lucide-react";
 import { useGetGenerationById } from "../hooks/useGetGenerationById";
 import { useDeleteGenerationById } from "../hooks/useDeleteGenerationById";
 import { useUpdateGeneration } from "@/hooks/useUpdateGeneration";
 import { useHistory } from "@/lib/contexts/HistoryContext";
+import { downloadMarkdownFile } from "../utils/generate-markdown";
 
 import {
   MermaidDiagram,
@@ -323,6 +324,14 @@ export default function GenerationPage() {
             >
               <Code2 className="mr-2 h-4 w-4 text-muted-foreground" />
               Task Generation
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-6 rounded-xl border-border/60 hover:border-border bg-card/50 transition-all duration-300 shadow-sm"
+              onClick={() => downloadMarkdownFile(generatedData)}
+            >
+              <Download className="mr-2 h-4 w-4 text-muted-foreground" />
+              Export Markdown
             </Button>
             <DeleteDialog
               open={isDeleteDialogOpen}
