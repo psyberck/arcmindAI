@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import MermaidDiagram from "./mermaidDiagram";
 import CopyDiagramButton from "./CopyDiagramButton";
+import ExportPDFButton from "./ExportPDFButton";
 import { ArchitectureData } from "../utils/types";
 import { cleanMermaidString } from "../utils/cleanMermaidString";
 import MicroservicesSection from "./MicroservicesSection";
@@ -34,6 +35,7 @@ export default function GeneratePage() {
     null,
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mermaidContainerRef = useRef<HTMLDivElement>(null);
 
   const userInput = watch("userInput", "");
 
@@ -343,13 +345,22 @@ export default function GeneratePage() {
                       Architecture Visual
                     </h2>
                   </div>
-                  <CopyDiagramButton
-                    code={cleanMermaidString(
-                      generatedData["Architecture Diagram"],
-                    )}
-                  />
+                  <div className="flex items-center gap-3">
+                    <CopyDiagramButton
+                      code={cleanMermaidString(
+                        generatedData["Architecture Diagram"],
+                      )}
+                    />
+                    <ExportPDFButton
+                      data={generatedData}
+                      diagramElement={mermaidContainerRef.current}
+                    />
+                  </div>
                 </div>
-                <div className="rounded-2xl border border-border/40 bg-card/30 p-8 overflow-hidden backdrop-blur-sm shadow-inner">
+                <div
+                  ref={mermaidContainerRef}
+                  className="rounded-2xl border border-border/40 bg-card/30 p-8 overflow-hidden backdrop-blur-sm shadow-inner"
+                >
                   <MermaidDiagram
                     chart={cleanMermaidString(
                       generatedData["Architecture Diagram"],
