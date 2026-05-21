@@ -375,6 +375,22 @@ export default function GenerationPage() {
               size="lg"
               className="rounded-2xl px-8"
             />
+            <Button
+              variant="outline"
+              className="h-10 px-6 rounded-xl border-border/60 hover:border-border bg-card/50 transition-all duration-300 shadow-sm"
+              onClick={() => setIsFrontendStructureDialogOpen(true)}
+            >
+              <Code2 className="mr-2 h-4 w-4 text-muted-foreground" />
+              Frontend Structure
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-6 rounded-xl border-border/60 hover:border-border bg-card/50 transition-all duration-300 shadow-sm"
+              onClick={() => setIsTaskGenerationDialogOpen(true)}
+            >
+              <Code2 className="mr-2 h-4 w-4 text-muted-foreground" />
+              Task Generation
+            </Button>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

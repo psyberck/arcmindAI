@@ -1,5 +1,5 @@
+"use client";
 import ExportPDFButton from "./ExportPDFButton";
-("use client");
 
 import animationData from "@/components/loaderLottie.json";
 import { StarterTemplates } from "@/components/prompt";
