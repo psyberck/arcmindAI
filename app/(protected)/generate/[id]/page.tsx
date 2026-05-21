@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 import {
   MermaidDiagram,
   CopyDiagramButton,
+  ExportPDFButton,
   MicroservicesSection,
   EntitiesSection,
   ApiRoutesSection,
@@ -79,36 +80,40 @@ export default function GenerationPage() {
 
   const [responseText, setResponseText] = useState("");
   const [doubtText, setDoubtText] = useState("");
+  const mermaidContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchGeneration = async () => {
-      if (id && typeof id === "string") {
-        const result = await getGenerationById(id);
-        if (result && result.success) {
-          setSystemName(result.output.userInput || "");
-          if (result.output.githubGeneration) {
-            setGithubGeneration(result.output.githubGeneration);
-            setIsGithubRepo(true);
-            setGeneratedData(null);
-          } else {
-            try {
-              const data = result.output.generatedOutput as ArchitectureData;
-              setGeneratedData(data);
-              setIsGithubRepo(false);
-              setGithubGeneration(null);
-            } catch (error) {
-              console.error("Error processing generation data:", error);
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        if (id && typeof id === "string") {
+          const result = await getGenerationById(id);
+          if (result && result.success) {
+            setSystemName(result.output.userInput || "");
+            if (result.output.githubGeneration) {
+              setGithubGeneration(result.output.githubGeneration);
+              setIsGithubRepo(true);
               setGeneratedData(null);
+            } else {
+              try {
+                const data = result.output.generatedOutput as ArchitectureData;
+                setGeneratedData(data);
+                setIsGithubRepo(false);
+                setGithubGeneration(null);
+              } catch (error) {
+                console.error("Error processing generation data:", error);
+                setGeneratedData(null);
+              }
             }
+          } else {
+            setGeneratedData(null);
+            setGithubGeneration(null);
           }
-        } else {
-          setGeneratedData(null);
-          setGithubGeneration(null);
         }
-      }
-    };
-    fetchGeneration();
-  }, [id]);
+      })();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [getGenerationById, id]);
 
   const handleUpdate = async () => {
     if (!id || typeof id !== "string" || !responseText.trim()) return;
@@ -270,12 +275,17 @@ export default function GenerationPage() {
         </Card>
 
         <section>
-          {/* Section header with copy button */}
+          {/* Section header with copy button and export PDF button */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Architecture Diagram</h2>
             <CopyDiagramButton code={cleanedGithubDiagram} />
           </div>
-          <MermaidDiagram chart={cleanedGithubDiagram} />
+          <div
+            ref={mermaidContainerRef}
+            className="rounded-2xl border border-border/40 bg-card/30 p-8 overflow-hidden backdrop-blur-sm shadow-inner"
+          >
+            <MermaidDiagram chart={cleanedGithubDiagram} />
+          </div>
         </section>
       </div>
     );
@@ -358,6 +368,13 @@ export default function GenerationPage() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-4">
+            <ExportPDFButton
+              data={generatedData}
+              diagramRef={mermaidContainerRef}
+              variant="default"
+              size="lg"
+              className="rounded-2xl px-8"
+            />
             <Button
               variant="outline"
               className="h-10 px-6 rounded-xl border-border/60 hover:border-border bg-card/50 transition-all duration-300 shadow-sm"
@@ -391,7 +408,6 @@ export default function GenerationPage() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
             <Button
               variant="outline"
               className="h-10 px-6 rounded-xl border-border/60 hover:border-border bg-card/50 transition-all duration-300 shadow-sm"
@@ -494,9 +510,21 @@ export default function GenerationPage() {
                     Architecture Visual
                   </h2>
                 </div>
-                <CopyDiagramButton code={cleanedDiagram} />
+                <div className="flex items-center gap-3">
+                  <CopyDiagramButton code={cleanedDiagram} />
+                  <ExportPDFButton
+                    data={generatedData}
+                    diagramRef={mermaidContainerRef}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                  />
+                </div>
               </div>
-              <div className="rounded-2xl border border-border/40 bg-card/30 p-8 overflow-hidden backdrop-blur-sm shadow-inner">
+              <div
+                ref={mermaidContainerRef}
+                className="rounded-2xl border border-border/40 bg-card/30 p-8 overflow-hidden backdrop-blur-sm shadow-inner"
+              >
                 <MermaidDiagram chart={cleanedDiagram} />
               </div>
             </section>
