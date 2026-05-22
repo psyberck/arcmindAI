@@ -38,10 +38,7 @@ export async function POST(req: NextRequest) {
     if (!userId) {
       apiGatewayErrorsTotal.inc({ status_code: "401" });
 
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json().catch(() => null);
@@ -51,12 +48,12 @@ export async function POST(req: NextRequest) {
 
       httpRequestDurationSeconds.observe(
         { route },
-        (Date.now() - startTime) / 1000
+        (Date.now() - startTime) / 1000,
       );
 
       return NextResponse.json(
         { error: "Invalid request body. Missing 'userInput' field." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -67,7 +64,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         { error: "Invalid input. Please provide a valid project idea." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -80,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     databaseQueryDurationSeconds.observe(
       { operation: "findFirst" },
-      (Date.now() - dbStart) / 1000
+      (Date.now() - dbStart) / 1000,
     );
 
     if (!user) {
@@ -88,12 +85,12 @@ export async function POST(req: NextRequest) {
 
       httpRequestDurationSeconds.observe(
         { route },
-        (Date.now() - startTime) / 1000
+        (Date.now() - startTime) / 1000,
       );
 
       return NextResponse.json(
         { status: 404, message: "User not Found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -102,60 +99,60 @@ export async function POST(req: NextRequest) {
 
       httpRequestDurationSeconds.observe(
         { route },
-        (Date.now() - startTime) / 1000
+        (Date.now() - startTime) / 1000,
       );
 
       return NextResponse.json(
         { status: 401, message: "Email is not verified" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // RATE LIMITING — skip only if user has their own Gemini API key
-const userApiKeys = await getUserApiKeys(userId);
+    const userApiKeys = await getUserApiKeys(userId);
 
-const hasOwnApiKey = !!userApiKeys.geminiApiKey;
+    const hasOwnApiKey = !!userApiKeys.geminiApiKey;
 
-let limit: number | null = null;
-let remaining: number | null = null;
-let reset: number | null = null;
+    let limit: number | null = null;
+    let remaining: number | null = null;
+    let reset: number | null = null;
 
-if (!hasOwnApiKey) {
-  const rateLimiter =
-    user.plan === "enterprise"
-      ? generationRateLimits.enterprise
-      : user.plan === "pro"
-      ? generationRateLimits.pro
-      : generationRateLimits.free;
+    if (!hasOwnApiKey) {
+      const rateLimiter =
+        user.plan === "enterprise"
+          ? generationRateLimits.enterprise
+          : user.plan === "pro"
+            ? generationRateLimits.pro
+            : generationRateLimits.free;
 
-  const result = await rateLimiter.limit(userId);
+      const result = await rateLimiter.limit(userId);
 
-  const { success } = result;
+      const { success } = result;
 
-  limit = result.limit;
-  remaining = result.remaining;
-  reset = result.reset;
+      limit = result.limit;
+      remaining = result.remaining;
+      reset = result.reset;
 
-  if (!success) {
-    apiGatewayErrorsTotal.inc({ status_code: "429" });
+      if (!success) {
+        apiGatewayErrorsTotal.inc({ status_code: "429" });
 
-    httpRequestDurationSeconds.observe(
-      { route },
-      (Date.now() - startTime) / 1000
-    );
+        httpRequestDurationSeconds.observe(
+          { route },
+          (Date.now() - startTime) / 1000,
+        );
 
-    return NextResponse.json(
-      {
-        error:
-          user.plan === "free"
-            ? "Free users can generate 5 architectures per hour."
-            : "Rate limit exceeded. Please try again later.",
-        retryAfter: new Date(reset).toISOString(),
-      },
-      { status: 429 }
-    );
-  }
-}
+        return NextResponse.json(
+          {
+            error:
+              user.plan === "free"
+                ? "Free users can generate 5 architectures per hour."
+                : "Rate limit exceeded. Please try again later.",
+            retryAfter: new Date(reset).toISOString(),
+          },
+          { status: 429 },
+        );
+      }
+    }
 
     // Keep the rest of your existing AI generation logic BELOW this point
 
@@ -170,9 +167,6 @@ if (!hasOwnApiKey) {
       new SystemMessage(SystemPrompt),
       new HumanMessage(userInput),
     ];
-
-    
-    
 
     // 🧠 Call Gemini model with timing and automatic fallback
     const aiStart = Date.now();
@@ -310,12 +304,12 @@ if (!hasOwnApiKey) {
       );
 
       return NextResponse.json({
-  success: true,
-  output: finalAIresponse,
-  limit,
-  remaining,
-  reset,
-});
+        success: true,
+        output: finalAIresponse,
+        limit,
+        remaining,
+        reset,
+      });
     } catch (jsonError: unknown) {
       aiGenerationFailureTotal.inc();
       const errorMessage =
