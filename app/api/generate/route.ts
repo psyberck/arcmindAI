@@ -24,32 +24,43 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function extractTextFromChunk(
-  chunk:
-    | {
-        text?: string | (() => string);
-        content?: string | { text?: string }[];
-      }
-    | string,
-): string {
+interface ChunkContent {
+  text?: string;
+  [key: string]: unknown;
+}
+
+interface MessageChunk {
+  content?: string | ChunkContent[];
+  text?: string | (() => string);
+  [key: string]: unknown;
+}
+
+function extractTextFromChunk(chunk: unknown): string {
   if (typeof chunk === "string") {
     return chunk;
   }
 
-  if (chunk?.text) {
-    return typeof chunk.text === "function" ? chunk.text() : chunk.text;
-  }
+  const msgChunk = chunk as MessageChunk;
 
-  if (chunk?.content) {
-    if (typeof chunk.content === "string") {
-      return chunk.content;
+  // Handle LangChain chunks which often have content as string or array
+  if (msgChunk?.content !== undefined) {
+    if (typeof msgChunk.content === "string") {
+      return msgChunk.content;
     }
-
-    if (Array.isArray(chunk.content)) {
-      return chunk.content
-        .map((item: { text?: string }) => item?.text || "")
+    if (Array.isArray(msgChunk.content)) {
+      return msgChunk.content
+        .map((item: ChunkContent | string) => {
+          if (typeof item === "string") return item;
+          return item?.text || "";
+        })
         .join("");
     }
+  }
+
+  if (msgChunk?.text) {
+    return typeof msgChunk.text === "function"
+      ? (msgChunk.text as () => string)()
+      : (msgChunk.text as string);
   }
 
   return "";
@@ -355,6 +366,9 @@ export async function POST(req: NextRequest) {
               `data: ${JSON.stringify({
                 done: true,
                 parsedData,
+                limit,
+                remaining,
+                reset,
               })}\n\n`,
             ),
           );

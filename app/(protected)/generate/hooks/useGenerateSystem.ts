@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import axios from "axios";
 import { DOC_ROUTES } from "@/lib/routes";
+import { ArchitectureData } from "../utils/types";
 
 interface GenerateResponse {
   success: boolean;
   output: string;
+  parsedData?: ArchitectureData;
+  limit?: number;
+  remaining?: number;
+  reset?: string;
 }
 
 export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
@@ -26,6 +30,7 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
 
     setIsLoading(true);
     setError(null);
+    setRetryAfter(null);
 
     try {
       const response = await fetch(DOC_ROUTES.API.GENERATE.ROOT, {
@@ -43,6 +48,14 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
+
+        if (response.status === 429 && errorBody.retryAfter) {
+          const secondsLeft = Math.ceil(
+            (new Date(errorBody.retryAfter).getTime() - Date.now()) / 1000,
+          );
+          setRetryAfter(Math.max(secondsLeft, 1));
+        }
+
         throw new Error(
           errorBody.error || `HTTP error! status: ${response.status}`,
         );
@@ -57,6 +70,12 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
       const decoder = new TextDecoder();
       let output = "";
       let buffer = "";
+      let parsedData = null;
+      let limitInfo = {
+        limit: undefined,
+        remaining: undefined,
+        reset: undefined,
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -75,45 +94,35 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
             if (!dataStr || dataStr === "[DONE]") continue;
             try {
               const parsed = JSON.parse(dataStr);
+
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+
               if (parsed && typeof parsed.chunk === "string") {
                 output += parsed.chunk;
                 // Real-time UI update with streaming chunks
                 onChunk?.(parsed.chunk);
               }
+
+              if (parsed.done) {
+                if (parsed.parsedData) parsedData = parsed.parsedData;
+                limitInfo = {
+                  limit: parsed.limit,
+                  remaining: parsed.remaining,
+                  reset: parsed.reset,
+                };
+              }
             } catch (e) {
+              if (e instanceof Error && e.message === "Streaming failed")
+                throw e;
               console.error("Failed to parse SSE chunk:", dataStr);
             }
           }
         }
       }
-      /* FINAL BUFFER HANDLING */
-
-      if (buffer.startsWith("data: ")) {
-        const dataStr = buffer.slice(6);
-
-        if (dataStr !== "[DONE]") {
-          try {
-            const parsed = JSON.parse(dataStr);
-
-            if (parsed && typeof parsed.chunk === "string") {
-              output += parsed.chunk;
-              onChunk?.(parsed.chunk);
-            }
-          } catch (error) {
-            console.error("Failed to parse final SSE chunk:", dataStr);
-          }
-        }
-      }
 
       reader.releaseLock();
-
-      console.log("FINAL OUTPUT:", output);
-      console.log("BUFFER REMAINING:", buffer);
-      console.log("RESPONSE STATUS:", response.status);
-      console.log(
-        "RESPONSE HEADERS:",
-        Object.fromEntries(response.headers.entries()),
-      );
 
       if (!output?.trim()) {
         throw new Error(
@@ -124,6 +133,8 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
       const data: GenerateResponse = {
         success: true,
         output,
+        parsedData,
+        ...limitInfo,
       };
 
       // Refetch history after successful generation
@@ -133,17 +144,8 @@ export function useGenerateSystem(refetchHistory?: () => Promise<void>) {
 
       return data;
     } catch (err) {
-      let errorMessage = "An error occurred";
-      if (axios.isAxiosError(err)) {
-        const error = err.response?.data?.error || err.response?.data?.message;
-        errorMessage =
-          error || `HTTP error! status: ${err.response?.status} (${err.code})`;
-        if (err.response?.data?.retryAfter) {
-          setRetryAfter(new Date(err.response.data.retryAfter).getTime());
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
       return null;
     } finally {

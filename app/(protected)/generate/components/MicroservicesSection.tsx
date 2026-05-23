@@ -3,13 +3,13 @@ import { ArchitectureData } from "../utils/types";
 import { Badge } from "@/components/ui/badge";
 
 interface MicroservicesSectionProps {
-  microservices?: ArchitectureData["microservices"];
+  microservices: ArchitectureData["microservices"];
 }
 
 export default function MicroservicesSection({
-  microservices = [],
+  microservices,
 }: MicroservicesSectionProps) {
-  const renderList = (title: string, items: string[]) => { 
+  const renderList = (title: string, items: string[]) => {
     if (!items.length) return null;
     return (
       <div className="mt-4 pt-4 border-t border-border/40">
@@ -54,7 +54,7 @@ export default function MicroservicesSection({
                   variant="outline"
                   className="bg-accent/50 text-[10px] font-medium border-border/50 py-0"
                 >
-                  {tech} 
+                  {tech}
                 </Badge>
               ))}
             </div>

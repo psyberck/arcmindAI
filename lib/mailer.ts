@@ -32,15 +32,9 @@ const isEmailConfigured =
   ADMIN_EMAIL;
 
 // For development: allow app to run without email (log warning instead)
-if (!isEmailConfigured && process.env.NODE_ENV === 'production') {
+if (!isEmailConfigured && process.env.NODE_ENV === "production") {
   throw new Error(
     "Missing OAuth2 configuration. Ensure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and ADMIN_EMAIL are set.",
-  );
-}
-
-if (!isEmailConfigured) {
-  console.warn(
-    "⚠️  Email configuration not set. Email features will be disabled. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and ADMIN_EMAIL to enable.",
   );
 }
 
@@ -64,9 +58,11 @@ if (oAuth2Client && isEmailConfigured) {
 // Helper: obtain a fresh access token safely
 async function getAccessToken(): Promise<string> {
   if (!oAuth2Client) {
-    throw new Error("Email is not configured. Set OAuth2 environment variables.");
+    throw new Error(
+      "Email is not configured. Set OAuth2 environment variables.",
+    );
   }
-  
+
   try {
     // googleapis types can return string | null | undefined in { token }
     const res = await oAuth2Client.getAccessToken();
@@ -110,12 +106,13 @@ export async function sendMail({
   text?: string;
   html?: string;
 }) {
-   console.log("Skipping email sending in local development");
-  return;
+  if (!isEmailConfigured) {
+    console.log(
+      "⚠️  Skipping email sending (Email is not configured). Set GOOGLE_CLIENT_ID, etc. to enable.",
+    );
+    return;
+  }
 
-    
-
-  
   // Acquire a fresh access token for each send
   const accessToken = await getAccessToken();
 
@@ -142,14 +139,14 @@ export async function sendMail({
   } catch (err) {
     console.error("Nodemailer transporter verification failed:", err);
     throw err;
-  } 
+  }
 
   const mailOptions = {
     from: `ArcMindAI <${ADMIN_EMAIL}>`,
     to,
     subject,
     text,
-    html, 
+    html,
   };
 
   try {

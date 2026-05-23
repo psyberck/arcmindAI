@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArchitectureData } from "../utils/types";
 
 interface EntitiesSectionProps {
-  entities?: ArchitectureData["entities"];
+  entities: ArchitectureData["entities"];
 }
 
-export default function EntitiesSection({ entities = [], }: EntitiesSectionProps) {
+export default function EntitiesSection({ entities }: EntitiesSectionProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {entities.map((entity, index) => (

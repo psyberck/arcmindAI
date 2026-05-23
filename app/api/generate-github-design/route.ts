@@ -9,7 +9,10 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { streamGeminiWithFallback } from "@/app/(protected)/generate/utils/aiClient";
 import { getUserApiKeys } from "@/lib/api-keys/getUserApiKeys";
 import {
+  aiGenerationDurationSeconds,
   aiGenerationFailureTotal,
+  aiGenerationRequestsTotal,
+  aiGenerationSuccessTotal,
   databaseQueryDurationSeconds,
   httpRequestsTotal,
 } from "@/lib/metrics";
@@ -21,11 +24,22 @@ interface GenerateGithubDesignRequest {
   branch?: string;
 }
 
+interface ChunkContent {
+  text?: string;
+  [key: string]: unknown;
+}
+
+interface MessageChunk {
+  content?: string | ChunkContent[];
+  text?: string | (() => string);
+  [key: string]: unknown;
+}
+
 export async function POST(request: NextRequest) {
   const route = "/api/generate-github-design";
   const method = "POST";
   let aiRequested = false;
-  const aiFailureRecorded = false;
+  let aiFailureRecorded = false;
 
   try {
     // Check authentication
@@ -77,31 +91,37 @@ export async function POST(request: NextRequest) {
       (Date.now() - dbFindStart) / 1000,
     );
 
-    // // If design already exists, return it from cache
-    // if (existingGeneration?.githubGeneration) {
-    //   return NextResponse.json({
-    //     success: true,
-    //     generationId: existingGeneration.id,
-    //     mermaidDiagram: existingGeneration.githubGeneration,
-    //     cached: true, // Indicate this is from cache
-    //   });
-    // }
-
+    // If design exists, stream it back in the same SSE format the frontend now expects
     if (existingGeneration?.githubGeneration) {
       const encoder = new TextEncoder();
       const cachedDiagram = existingGeneration.githubGeneration;
+      const genId = existingGeneration.id;
 
       const cachedStream = new ReadableStream({
         start(controller) {
-          controller.enqueue(encoder.encode(cachedDiagram));
-
+          // Send as one single chunk or few chunks for the "typing" effect
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ chunk: cachedDiagram })}\n\n`,
+            ),
+          );
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                done: true,
+                generationId: genId,
+                cached: true,
+              })}\n\n`,
+            ),
+          );
           controller.close();
         },
       });
 
+      httpRequestsTotal.inc({ route, method, status_code: "200" });
       return new Response(cachedStream, {
         headers: {
-          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
         },
@@ -124,7 +144,9 @@ export async function POST(request: NextRequest) {
     // 🔑 Fetch user's API keys
     const userApiKeys = await getUserApiKeys(userId);
 
+    aiGenerationRequestsTotal.inc();
     aiRequested = true;
+    const aiStart = Date.now();
 
     // streaming version
     const responseStream = await streamGeminiWithFallback(
@@ -137,34 +159,43 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         try {
           for await (const chunk of responseStream) {
-            //       const data: any = chunk;
+            let text = "";
+            const msgChunk = chunk as MessageChunk;
 
-            // let text = "";
-
-            // if (typeof data === "string") {
-            //   text = data;
-            // } else if (data?.text) {
-            //   text =
-            //     typeof data.text === "function"
-            //       ? data.text()
-            //       : data.text;
-            // } else if (data?.content) {
-            //   if (typeof data.content === "string") {
-            //     text = data.content;
-            //   } else if (Array.isArray(data.content)) {
-            //     text = data.content
-            //       .map((item: any) => item?.text || "")
-            //       .join("");
-            //   }
-            // }
-            const text = chunk.content?.toString() || "";
+            if (typeof msgChunk === "string") {
+              text = msgChunk;
+            } else if (msgChunk?.content !== undefined) {
+              if (typeof msgChunk.content === "string") {
+                text = msgChunk.content;
+              } else if (Array.isArray(msgChunk.content)) {
+                text = msgChunk.content
+                  .map((item: ChunkContent | string) => {
+                    if (typeof item === "string") return item;
+                    return item?.text || "";
+                  })
+                  .join("");
+              }
+            } else if (msgChunk?.text) {
+              text =
+                typeof msgChunk.text === "function"
+                  ? msgChunk.text()
+                  : msgChunk.text;
+            }
 
             // Store full response
             mermaidDiagram += text;
 
-            // Stream chunk immediately
-            if (text) controller.enqueue(encoder.encode(text));
+            // Stream chunk as JSON SSE immediately
+            if (text) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ chunk: text })}\n\n`),
+              );
+            }
           }
+
+          const aiDuration = (Date.now() - aiStart) / 1000;
+          aiGenerationDurationSeconds.observe(aiDuration);
+
           // Cleanup markdown formatting
           mermaidDiagram = mermaidDiagram
             .replace(/```mermaid\n?/g, "")
@@ -172,37 +203,56 @@ export async function POST(request: NextRequest) {
             .trim();
 
           // Save completed response
-          await db.generation.create({
+          const dbCreateStart = Date.now();
+          const generation = await db.generation.create({
             data: {
               userInput: repoIdentifier,
               githubGeneration: mermaidDiagram,
               userId,
             },
           });
+          databaseQueryDurationSeconds.observe(
+            { operation: "create" },
+            (Date.now() - dbCreateStart) / 1000,
+          );
+
+          aiGenerationSuccessTotal.inc();
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                done: true,
+                generationId: generation.id,
+              })}\n\n`,
+            ),
+          );
 
           controller.close();
         } catch (error) {
+          aiGenerationFailureTotal.inc();
+          aiFailureRecorded = true;
           console.error("Streaming error:", error);
-
-          controller.error(error);
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                error:
+                  error instanceof Error ? error.message : "Streaming failed",
+              })}\n\n`,
+            ),
+          );
+          controller.close();
         }
       },
     });
 
+    httpRequestsTotal.inc({ route, method, status_code: "200" });
     return new Response(readable, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       },
     });
-
-    // return NextResponse.json({
-    //   success: true,
-    //   generationId: generation.id,
-    //   mermaidDiagram,
-    //   cached: false, // Indicate this is newly generated
-    // });
   } catch (error) {
     if (aiRequested && !aiFailureRecorded) {
       aiGenerationFailureTotal.inc();

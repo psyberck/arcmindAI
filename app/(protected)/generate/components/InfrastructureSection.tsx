@@ -2,13 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArchitectureData } from "../utils/types";
 
 interface InfrastructureSectionProps {
-  infra?: ArchitectureData["infrastructure"];
+  infra: ArchitectureData["infrastructure"];
 }
 
 export default function InfrastructureSection({
   infra,
 }: InfrastructureSectionProps) {
-   if (!infra) return null;
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {Object.entries(infra).map(([key, value]) => (

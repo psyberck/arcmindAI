@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshCcw, AlertCircle } from "lucide-react";
@@ -13,7 +13,7 @@ interface UpdateResponseCardProps {
   error?: string | null;
 }
 
-export default function UpdateResponseCard({ 
+export default function UpdateResponseCard({
   responseText,
   onResponseTextChange,
   onUpdate,

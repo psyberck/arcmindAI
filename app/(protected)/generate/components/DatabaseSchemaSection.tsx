@@ -3,13 +3,13 @@ import { ArchitectureData } from "../utils/types";
 import { Badge } from "@/components/ui/badge";
 
 interface DatabaseSchemaSectionProps {
-  schema?: ArchitectureData["databaseSchema"];
-}  
+  schema: ArchitectureData["databaseSchema"];
+}
 
 export default function DatabaseSchemaSection({
-  schema, 
+  schema,
 }: DatabaseSchemaSectionProps) {
-   if (!schema) return null;  
+  if (!schema) return null;
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
@@ -52,4 +52,4 @@ export default function DatabaseSchemaSection({
       </div>
     </div>
   );
-} 
+}

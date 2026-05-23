@@ -50,25 +50,37 @@ function checkInMemoryLimit(
 }
 
 // Plan-aware generation rate limiters
-export const generationRateLimits = {
-  free: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(5, "1 h"),
-    analytics: true,
-  }),
+export const generationRateLimits = redis
+  ? {
+      free: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, "1 h"),
+        analytics: true,
+      }),
 
-  pro: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(50, "1 h"),
-    analytics: true,
-  }),
+      pro: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(50, "1 h"),
+        analytics: true,
+      }),
 
-  enterprise: new Ratelimit({
-    redis: redis!,
-    limiter: Ratelimit.slidingWindow(200, "1 h"),
-    analytics: true,
-  }),
-};
+      enterprise: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(200, "1 h"),
+        analytics: true,
+      }),
+    }
+  : {
+      free: {
+        limit: async (key: string) => checkInMemoryLimit(key, 5, 3600000),
+      } as unknown as Ratelimit,
+      pro: {
+        limit: async (key: string) => checkInMemoryLimit(key, 50, 3600000),
+      } as unknown as Ratelimit,
+      enterprise: {
+        limit: async (key: string) => checkInMemoryLimit(key, 200, 3600000),
+      } as unknown as Ratelimit,
+    };
 
 export const otpRateLimit = redis
   ? new Ratelimit({
