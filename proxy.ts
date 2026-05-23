@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 const DEFAULT_MAX_BYTES = 750 * 1024;
 const MAX_BYTES = Number(process.env.API_BODY_LIMIT_BYTES) || DEFAULT_MAX_BYTES;
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (!["POST", "PUT", "PATCH"].includes(req.method)) return;
 
   const declared = req.headers.get("content-length");
