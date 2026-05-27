@@ -1,7 +1,10 @@
+import { escapeHtml } from "@/lib/escape-html";
+
 export function forgotPasswordEmailTemplate(
   username: string,
   resetUrl: string,
 ) {
+  const safeUsername = escapeHtml(username);
   return `
     <html>
       <body style="font-family: 'Inter', sans-serif; background-color: #f8f9fb; border-radius: 14px; padding: 10px; margin: 0;">
@@ -17,7 +20,7 @@ export function forgotPasswordEmailTemplate(
           <div style="height: 1px; background: #eee; margin: 24px 0;"></div>
 
           <!-- Body -->
-          <p style="color: #444; font-size: 15px;">Hi <strong>${username}</strong>,</p>
+          <p style="color: #444; font-size: 15px;">Hi <strong>${safeUsername}</strong>,</p>
           <p style="color: #555; font-size: 15px; line-height: 1.6;">
             We received a request to reset your password for your ArcMindAI account. If you made this request, click the button below to reset your password.
           </p>

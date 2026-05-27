@@ -1,15 +1,20 @@
+import { escapeHtml } from "@/lib/escape-html";
 import { ContactFormSchema } from "@/lib/validation/contactFormSchema";
 
 export function getContactEmailTemplate(formData: ContactFormSchema) {
   const { firstname, lastname, email, message } = formData;
-  const fullname = `${firstname} ${lastname}`;
+  const safeFirstname = escapeHtml(firstname);
+  const safeLastname = escapeHtml(lastname);
+  const safeEmail = escapeHtml(email);
+  const safeMessage = escapeHtml(message);
+  const fullname = `${safeFirstname} ${safeLastname}`;
 
   const subject = `Contact Form Submission from ${fullname}`;
 
   const text = `
 Hello,
 
-You have received a new contact form submission from ${fullname}.
+You have received a new contact form submission from ${firstname} ${lastname}.
 
 Email: ${email}
 
@@ -43,9 +48,9 @@ ArcMindAI Team
     <div class="content">
       <p>Hello,</p>
       <p>You have received a new contact form submission from <strong>${fullname}</strong>.</p>
-      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Email:</strong> ${safeEmail}</p>
       <p><strong>Message:</strong></p>
-      <p>${message.replace(/\n/g, "<br>")}</p>
+      <p>${safeMessage.replace(/\n/g, "<br>")}</p>
       <p>Best regards,<br>ArcMindAI Team</p>
     </div>
     <div class="footer">

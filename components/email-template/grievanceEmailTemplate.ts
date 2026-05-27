@@ -1,17 +1,21 @@
+import { escapeHtml } from "@/lib/escape-html";
 import { GrievanceFormData } from "@/lib/validation/grievanceFormSchema";
 
 export function getGrievanceEmailTemplate(
   formData: GrievanceFormData & { userEmail: string; username?: string },
 ) {
   const { rating, reason, userEmail, username = "User" } = formData;
-  const userDisplay = username || userEmail;
+  const safeUsername = escapeHtml(username);
+  const safeUserEmail = escapeHtml(userEmail);
+  const safeReason = escapeHtml(reason);
+  const userDisplay = safeUsername || safeUserEmail;
 
   const subject = `Subscription Cancellation Grievance from ${userDisplay}`;
 
   const text = `
 Hello,
 
-You have received a new subscription cancellation grievance from ${userDisplay}.
+You have received a new subscription cancellation grievance from ${username}.
 
 Email: ${userEmail}
 Rating: ${rating}
@@ -45,10 +49,10 @@ ArcMindAI Team
     <div class="content">
       <p>Hello,</p>
       <p>You have received a new subscription cancellation grievance from <strong>${userDisplay}</strong>.</p>
-      <p><strong>Email:</strong> ${userEmail}</p>
-      <p><strong>Rating:</strong> ${rating}</p>
+      <p><strong>Email:</strong> ${safeUserEmail}</p>
+      <p><strong>Rating:</strong> ${escapeHtml(String(rating))}</p>
       <p><strong>Reason:</strong></p>
-      <p>${reason.replace(/\n/g, "<br>")}</p>
+      <p>${safeReason.replace(/\n/g, "<br>")}</p>
       <p>Best regards,<br>ArcMindAI Team</p>
     </div>
     <div class="footer">

@@ -1,4 +1,7 @@
+import { escapeHtml } from "@/lib/escape-html";
+
 export function welcomeEmailTemplate(username: string) {
+  const safeUsername = escapeHtml(username);
   return `
     <html>
       <body style="font-family: 'Inter', sans-serif; background-color: #f8f9fb; border-radius: 14px; padding: 10px; margin: 0;">
@@ -14,7 +17,7 @@ export function welcomeEmailTemplate(username: string) {
           <div style="height: 1px; background: #eee; margin: 24px 0;"></div>
   
           <!-- Body -->
-          <p style="color: #444; font-size: 15px;">Hey <strong>${username}</strong>,</p>
+          <p style="color: #444; font-size: 15px;">Hey <strong>${safeUsername}</strong>,</p>
           <p style="color: #555; font-size: 15px; line-height: 1.6;">
             Welcome to <strong>arcmindAI</strong>! Your email has been successfully verified and your account is now active.
             You can start exploring our platform to build, collaborate, and deploy AI-powered applications effortlessly.
