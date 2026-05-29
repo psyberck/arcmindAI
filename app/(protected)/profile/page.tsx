@@ -165,7 +165,7 @@ export default function ProfilePage() {
 
           {updateProfileError && (
             <Alert className="mb-6" variant="destructive">
-              <AlertDescription>{updatePasswordError}</AlertDescription>
+              <AlertDescription>{updateProfileError}</AlertDescription>
             </Alert>
           )}
 
